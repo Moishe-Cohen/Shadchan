@@ -1,0 +1,204 @@
+CREATE TABLE people (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    firstName TEXT NOT NULL,
+    lastName TEXT NOT NULL,
+    gender TEXT NOT NULL,
+    age INTEGER,
+    birthDate INTEGER,
+    city TEXT NOT NULL DEFAULT '',
+    yeshivaOrSeminary TEXT NOT NULL DEFAULT '',
+    community TEXT NOT NULL DEFAULT '',
+    phone TEXT NOT NULL DEFAULT '',
+    email TEXT NOT NULL DEFAULT '',
+    photoPath TEXT,
+    resumePath TEXT,
+    notes TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'ACTIVE',
+    dateCreated INTEGER NOT NULL,
+    dateUpdated INTEGER NOT NULL
+);
+
+CREATE TABLE contacts (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    personId INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    relationship TEXT NOT NULL,
+    phone TEXT NOT NULL DEFAULT '',
+    email TEXT NOT NULL DEFAULT '',
+    notes TEXT NOT NULL DEFAULT '',
+    FOREIGN KEY(personId) REFERENCES people(id) ON DELETE CASCADE
+);
+
+CREATE INDEX contacts_personId ON contacts(personId);
+
+CREATE TABLE suggestions (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    boyId INTEGER NOT NULL,
+    girlId INTEGER NOT NULL,
+    dateCreated INTEGER NOT NULL,
+    createdBy TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'חדש',
+    lastUpdated INTEGER NOT NULL,
+    notes TEXT NOT NULL DEFAULT '',
+    FOREIGN KEY(boyId) REFERENCES people(id) ON DELETE CASCADE,
+    FOREIGN KEY(girlId) REFERENCES people(id) ON DELETE CASCADE
+);
+
+CREATE INDEX suggestions_boyId ON suggestions(boyId);
+CREATE INDEX suggestions_girlId ON suggestions(girlId);
+
+-- ===================== People =====================
+
+getByGender:
+SELECT * FROM people
+WHERE gender = :gender
+AND (
+    :query = '' OR
+    firstName LIKE '%' || :query || '%' OR
+    lastName LIKE '%' || :query || '%' OR
+    city LIKE '%' || :query || '%' OR
+    yeshivaOrSeminary LIKE '%' || :query || '%' OR
+    notes LIKE '%' || :query || '%' OR
+    phone LIKE '%' || :query || '%'
+)
+AND (:statusFilter IS NULL OR status = :statusFilter)
+AND (:cityFilter IS NULL OR city = :cityFilter)
+ORDER BY lastName ASC, firstName ASC;
+
+getById:
+SELECT * FROM people WHERE id = :id;
+
+globalSearch:
+SELECT * FROM people
+WHERE
+    firstName LIKE '%' || :query || '%' OR
+    lastName LIKE '%' || :query || '%' OR
+    city LIKE '%' || :query || '%' OR
+    yeshivaOrSeminary LIKE '%' || :query || '%' OR
+    notes LIKE '%' || :query || '%' OR
+    phone LIKE '%' || :query || '%' OR
+    email LIKE '%' || :query || '%'
+ORDER BY lastName ASC, firstName ASC;
+
+findPossibleDuplicates:
+SELECT * FROM people
+WHERE firstName = :firstName COLLATE NOCASE
+AND lastName = :lastName COLLATE NOCASE
+AND id != :excludeId
+AND (:age IS NULL OR age IS NULL OR ABS(age - :age) <= 1);
+
+countByGender:
+SELECT COUNT(*) FROM people WHERE gender = :gender;
+
+recentlyAdded:
+SELECT * FROM people ORDER BY dateCreated DESC LIMIT :limit;
+
+allCities:
+SELECT DISTINCT city FROM people WHERE city != '' ORDER BY city ASC;
+
+insertPerson:
+INSERT INTO people(firstName, lastName, gender, age, birthDate, city, yeshivaOrSeminary, community, phone, email, photoPath, resumePath, notes, status, dateCreated, dateUpdated)
+VALUES (:firstName, :lastName, :gender, :age, :birthDate, :city, :yeshivaOrSeminary, :community, :phone, :email, :photoPath, :resumePath, :notes, :status, :dateCreated, :dateUpdated);
+
+lastInsertRowId:
+SELECT last_insert_rowid();
+
+updatePerson:
+UPDATE people SET
+    firstName = :firstName, lastName = :lastName, gender = :gender, age = :age, birthDate = :birthDate,
+    city = :city, yeshivaOrSeminary = :yeshivaOrSeminary, community = :community, phone = :phone, email = :email,
+    photoPath = :photoPath, resumePath = :resumePath, notes = :notes, status = :status, dateUpdated = :dateUpdated
+WHERE id = :id;
+
+deletePerson:
+DELETE FROM people WHERE id = :id;
+
+getAllPeopleOnce:
+SELECT * FROM people ORDER BY lastName ASC, firstName ASC;
+
+-- ===================== Contacts =====================
+
+getContactsForPerson:
+SELECT * FROM contacts WHERE personId = :personId ORDER BY id ASC;
+
+insertContact:
+INSERT INTO contacts(personId, name, relationship, phone, email, notes)
+VALUES (:personId, :name, :relationship, :phone, :email, :notes);
+
+updateContact:
+UPDATE contacts SET name = :name, relationship = :relationship, phone = :phone, email = :email, notes = :notes
+WHERE id = :id;
+
+deleteContact:
+DELETE FROM contacts WHERE id = :id;
+
+-- ===================== Suggestions =====================
+
+getAllSuggestions:
+SELECT s.id AS id, s.boyId AS boyId, s.girlId AS girlId,
+       (b.firstName || ' ' || b.lastName) AS boyName,
+       (g.firstName || ' ' || g.lastName) AS girlName,
+       s.dateCreated AS dateCreated, s.createdBy AS createdBy,
+       s.status AS status, s.lastUpdated AS lastUpdated, s.notes AS notes
+FROM suggestions s
+JOIN people b ON b.id = s.boyId
+JOIN people g ON g.id = s.girlId
+WHERE
+    (:query = '' OR b.firstName LIKE '%' || :query || '%' OR b.lastName LIKE '%' || :query || '%'
+        OR g.firstName LIKE '%' || :query || '%' OR g.lastName LIKE '%' || :query || '%'
+        OR s.notes LIKE '%' || :query || '%')
+AND (:statusFilter IS NULL OR s.status = :statusFilter)
+ORDER BY s.lastUpdated DESC;
+
+getSuggestionsForPerson:
+SELECT s.id AS id, s.boyId AS boyId, s.girlId AS girlId,
+       (b.firstName || ' ' || b.lastName) AS boyName,
+       (g.firstName || ' ' || g.lastName) AS girlName,
+       s.dateCreated AS dateCreated, s.createdBy AS createdBy,
+       s.status AS status, s.lastUpdated AS lastUpdated, s.notes AS notes
+FROM suggestions s
+JOIN people b ON b.id = s.boyId
+JOIN people g ON g.id = s.girlId
+WHERE s.boyId = :personId OR s.girlId = :personId
+ORDER BY s.lastUpdated DESC;
+
+getSuggestionById:
+SELECT s.id AS id, s.boyId AS boyId, s.girlId AS girlId,
+       (b.firstName || ' ' || b.lastName) AS boyName,
+       (g.firstName || ' ' || g.lastName) AS girlName,
+       s.dateCreated AS dateCreated, s.createdBy AS createdBy,
+       s.status AS status, s.lastUpdated AS lastUpdated, s.notes AS notes
+FROM suggestions s
+JOIN people b ON b.id = s.boyId
+JOIN people g ON g.id = s.girlId
+WHERE s.id = :id;
+
+getRawSuggestionById:
+SELECT * FROM suggestions WHERE id = :id;
+
+countActiveSuggestions:
+SELECT COUNT(*) FROM suggestions WHERE status NOT IN ('נסגר', 'בוטל', 'התחתנו');
+
+recentActivity:
+SELECT s.id AS id, s.boyId AS boyId, s.girlId AS girlId,
+       (b.firstName || ' ' || b.lastName) AS boyName,
+       (g.firstName || ' ' || g.lastName) AS girlName,
+       s.dateCreated AS dateCreated, s.createdBy AS createdBy,
+       s.status AS status, s.lastUpdated AS lastUpdated, s.notes AS notes
+FROM suggestions s
+JOIN people b ON b.id = s.boyId
+JOIN people g ON g.id = s.girlId
+ORDER BY s.lastUpdated DESC LIMIT :limit;
+
+suggestionExistsForPair:
+SELECT COUNT(*) FROM suggestions WHERE boyId = :boyId AND girlId = :girlId;
+
+insertSuggestion:
+INSERT INTO suggestions(boyId, girlId, dateCreated, createdBy, status, lastUpdated, notes)
+VALUES (:boyId, :girlId, :dateCreated, :createdBy, :status, :lastUpdated, :notes);
+
+updateSuggestion:
+UPDATE suggestions SET status = :status, lastUpdated = :lastUpdated, notes = :notes WHERE id = :id;
+
+deleteSuggestion:
+DELETE FROM suggestions WHERE id = :id;
