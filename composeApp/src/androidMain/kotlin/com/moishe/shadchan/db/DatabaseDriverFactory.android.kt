@@ -8,7 +8,7 @@ actual class DatabaseDriverFactory actual constructor(private val context: Platf
     actual fun createDriver(): SqlDriver {
         return AndroidSqliteDriver(
             schema = ShadchanDatabase.Schema,
-            context = context,
+            context = context.androidContext,
             name = "shadchan.db",
             callback = object : AndroidSqliteDriver.Callback(ShadchanDatabase.Schema) {
                 override fun onOpen(db: androidx.sqlite.db.SupportSQLiteDatabase) {
