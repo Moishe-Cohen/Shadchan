@@ -7,7 +7,7 @@ import com.moishe.shadchan.platform.PlatformContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-private val PlatformContext.dataStore by preferencesDataStore(name = "settings")
+private val android.content.Context.dataStore by preferencesDataStore(name = "settings")
 
 actual class SettingsRepository actual constructor(private val context: PlatformContext) {
     private object Keys {
@@ -15,7 +15,7 @@ actual class SettingsRepository actual constructor(private val context: Platform
         val FONT_SIZE = stringPreferencesKey("font_size")
     }
 
-    actual val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
+    actual val settings: Flow<AppSettings> = context.androidContext.dataStore.data.map { prefs ->
         AppSettings(
             themeMode = prefs[Keys.THEME_MODE] ?: ThemeMode.SYSTEM,
             fontSize = prefs[Keys.FONT_SIZE] ?: FontSize.MEDIUM
@@ -23,10 +23,10 @@ actual class SettingsRepository actual constructor(private val context: Platform
     }
 
     actual suspend fun setThemeMode(mode: String) {
-        context.dataStore.edit { it[Keys.THEME_MODE] = mode }
+        context.androidContext.dataStore.edit { it[Keys.THEME_MODE] = mode }
     }
 
     actual suspend fun setFontSize(size: String) {
-        context.dataStore.edit { it[Keys.FONT_SIZE] = size }
+        context.androidContext.dataStore.edit { it[Keys.FONT_SIZE] = size }
     }
 }
