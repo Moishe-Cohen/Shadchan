@@ -17,9 +17,9 @@ actual class BackupManager actual constructor(private val context: PlatformConte
 
     actual fun createBackup(destination: String): Result<Unit> {
         return try {
-            val dbFile = context.getDatabasePath("shadchan.db")
+            val dbFile = context.androidContext.getDatabasePath("shadchan.db")
 
-            context.contentResolver.openOutputStream(Uri.parse(destination))?.use { out ->
+            context.androidContext.contentResolver.openOutputStream(Uri.parse(destination))?.use { out ->
                 ZipOutputStream(out).use { zip ->
                     if (dbFile.exists()) addFileToZip(zip, dbFile, DB_ENTRY)
                     File(fileStorage.photosDir()).listFiles()?.forEach { addFileToZip(zip, it, PHOTOS_PREFIX + it.name) }
@@ -36,7 +36,7 @@ actual class BackupManager actual constructor(private val context: PlatformConte
         return try {
             DatabaseHolder.closeAndReset()
 
-            val dbFile = context.getDatabasePath("shadchan.db")
+            val dbFile = context.androidContext.getDatabasePath("shadchan.db")
             dbFile.parentFile?.mkdirs()
             File(dbFile.path + "-wal").delete()
             File(dbFile.path + "-shm").delete()
@@ -44,7 +44,7 @@ actual class BackupManager actual constructor(private val context: PlatformConte
             val photosDir = File(fileStorage.photosDir()).apply { listFiles()?.forEach { it.delete() } }
             val resumesDir = File(fileStorage.resumesDir()).apply { listFiles()?.forEach { it.delete() } }
 
-            context.contentResolver.openInputStream(Uri.parse(source))?.use { input ->
+            context.androidContext.contentResolver.openInputStream(Uri.parse(source))?.use { input ->
                 ZipInputStream(input).use { zip ->
                     var entry: ZipEntry? = zip.nextEntry
                     while (entry != null) {

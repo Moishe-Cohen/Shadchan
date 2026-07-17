@@ -10,7 +10,7 @@ actual class PlatformActions actual constructor(private val context: PlatformCon
         return try {
             val file = File(path)
             if (!file.exists()) return false
-            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            val uri = FileProvider.getUriForFile(context.androidContext, "${context.androidContext.packageName}.fileprovider", file)
             val ext = file.extension.lowercase()
             val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: "*/*"
             val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -18,7 +18,7 @@ actual class PlatformActions actual constructor(private val context: PlatformCon
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            context.startActivity(intent)
+            context.androidContext.startActivity(intent)
             true
         } catch (e: Exception) {
             false

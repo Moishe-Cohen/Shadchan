@@ -1,3 +1,3 @@
 package com.moishe.shadchan.platform
 
-actual typealias PlatformContext = android.content.Context
+actual class PlatformContext(val androidContext: android.content.Context)

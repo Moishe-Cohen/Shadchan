@@ -6,8 +6,8 @@ import java.util.UUID
 
 actual class FileStorage actual constructor(private val context: PlatformContext) {
 
-    actual fun photosDir(): String = File(context.filesDir, "photos").apply { mkdirs() }.absolutePath
-    actual fun resumesDir(): String = File(context.filesDir, "resumes").apply { mkdirs() }.absolutePath
+    actual fun photosDir(): String = File(context.androidContext.filesDir, "photos").apply { mkdirs() }.absolutePath
+    actual fun resumesDir(): String = File(context.androidContext.filesDir, "resumes").apply { mkdirs() }.absolutePath
 
     actual fun copyPickedPhoto(source: String): String? = copyPickedFile(source, File(photosDir()))
     actual fun copyPickedResume(source: String): String? = copyPickedFile(source, File(resumesDir()))
@@ -18,7 +18,7 @@ actual class FileStorage actual constructor(private val context: PlatformContext
             val ext = guessExtension(uri) ?: "dat"
             val fileName = "${UUID.randomUUID()}.$ext"
             val outFile = File(targetDir, fileName)
-            context.contentResolver.openInputStream(uri)?.use { input ->
+            context.androidContext.contentResolver.openInputStream(uri)?.use { input ->
                 outFile.outputStream().use { output -> input.copyTo(output) }
             }
             outFile.absolutePath
@@ -28,7 +28,7 @@ actual class FileStorage actual constructor(private val context: PlatformContext
     }
 
     private fun guessExtension(uri: Uri): String? {
-        val type = context.contentResolver.getType(uri) ?: return uri.lastPathSegment?.substringAfterLast('.', "")
+        val type = context.androidContext.contentResolver.getType(uri) ?: return uri.lastPathSegment?.substringAfterLast('.', "")
         return when (type) {
             "image/jpeg" -> "jpg"
             "image/png" -> "png"
